@@ -1,7 +1,7 @@
 package product
 
 const (
-	queryCreateProduct = `INSERT INTO TABLE product(id, name, description, price, stock)
+	queryCreateProduct = `INSERT INTO product(id, name, description, price, stock)
   VALUES (
     $1, $2, $3, $4, $5
   )
@@ -19,7 +19,7 @@ const (
   `
 
 	queryUpdateProduct = `UPDATE product 
-  SET name = $1, description = $2, price = $3, stock = $4, modified_at = NOW() 
+  SET name = COALESCE($1, name), description = COALESCE($2, description), price = COALESCE($3, price), stock = COALESCE($4, stock), modified_at = NOW() 
   WHERE id = $5
   RETURNING id, name, description, price, stock, created_at, modified_at
   `

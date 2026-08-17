@@ -21,13 +21,6 @@ func NewHandler(productRepo *product.Repository) *Handler {
 	}
 }
 
-type createProductRequest struct {
-	Name        string  `json:"name"`
-	Description *string `json:"description"`
-	Price       float32 `json:"price"`
-	Stock       float32 `json:"stock"`
-}
-
 func (h *Handler) GetProductList(w http.ResponseWriter, r *http.Request) {
 	products, err := h.productRepo.GetProducts(r.Context(), 0, 10)
 	if err != nil {
@@ -75,13 +68,14 @@ func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	var req createProductRequest
+	var req product.CreateProductRequestDto
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid request body : %v", err), http.StatusBadRequest)
 		return
 	}
 
-	p := product.Product{
+	p := product.CreateProductRequestParam{
 		ID:          uuid.New(),
 		Name:        req.Name,
 		Description: req.Description,
@@ -89,7 +83,7 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 		Stock:       req.Stock,
 	}
 
-	newProduct, err := h.productRepo.Create(r.Context(), p)
+	err := h.productRepo.Create(r.Context(), p)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error creating product : %v", err), http.StatusInternalServerError)
 		return
@@ -97,11 +91,13 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(newProduct)
+	json.NewEncoder(w).Encode(struct {
+		ID uuid.UUID `json:"id"`
+	}{ID: p.ID})
 }
 
 func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
-	var req product.ProductUpdateRequest
+	var req product.ProductUpdateRequestDto
 
 	id, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
@@ -114,7 +110,7 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	p := product.ProductUpdateRequest{
+	p := product.ProductUpdateRequestParam{
 		ID:          id,
 		Name:        req.Name,
 		Description: req.Description,

@@ -22,18 +22,14 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	}
 }
 
-func (r *Repository) Create(ctx context.Context, p Product) (*Product, error) {
-	err := r.db.QueryRow(ctx, queryCreateProduct, p.ID, p.Name, p.Description, p.Price, p.Stock).Scan(&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock)
+func (r *Repository) Create(ctx context.Context, param CreateProductRequestParam) error {
+	_, err := r.db.Exec(ctx, queryCreateProduct, param.ID, param.Name, param.Description, param.Price, param.Stock)
 
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrProductNotFound
-		}
-
-		return nil, fmt.Errorf("Error create product %w", err)
+		return fmt.Errorf("Error create product %w", err)
 	}
 
-	return &p, nil
+	return nil
 }
 
 func (r *Repository) GetProducts(ctx context.Context, page, limit int) (ProductListResponse, error) {
@@ -82,9 +78,10 @@ func (r *Repository) GetProductById(ctx context.Context, id uuid.UUID) (*Product
 	return &p, nil
 }
 
-func (r *Repository) UpdateProductById(ctx context.Context, p ProductUpdateRequest) (*ProductUpdateRequest, error) {
+func (r *Repository) UpdateProductById(ctx context.Context, p ProductUpdateRequestParam) (*Product, error) {
+	var result Product
 	err := r.db.QueryRow(ctx, queryUpdateProduct, p.Name, p.Description, p.Price, p.Stock, p.ID).Scan(
-		&p.ID, &p.Name, &p.Description, &p.Price, &p.Stock, &p.CreatedAt, &p.ModifiedAt)
+		&result.ID, &result.Name, &result.Description, &result.Price, &p.Stock, &result.CreatedAt, &result.ModifiedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -94,7 +91,7 @@ func (r *Repository) UpdateProductById(ctx context.Context, p ProductUpdateReque
 		return nil, fmt.Errorf("Error updating product %w", err)
 	}
 
-	return &p, nil
+	return &result, nil
 }
 
 func (r *Repository) DeleteProduct(ctx context.Context, id uuid.UUID) error {
